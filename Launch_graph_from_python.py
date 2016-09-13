@@ -74,4 +74,8 @@ zoom = plugins.Zoom(button=False, enabled=True)
 #Add the plugins to the figure
 plugins.connect(fig, LinkedView(points, lines[0], linedata), zoom)
 
-mpld3.show()
+#Save as html
+mpld3.save_html(fig, file("figure.html", "wb"))
+
+#Open in browser from python
+#mpld3.show()
