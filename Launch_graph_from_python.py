@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import mpld3
 from mpld3 import plugins, utils
+import pandas as pd
 
 
 class LinkedView(plugins.PluginBase):
@@ -44,15 +45,19 @@ class LinkedView(plugins.PluginBase):
                       "idline": utils.get_id(line),
                       "data": linedata}
 
-fig, ax = plt.subplots(2)
+fig, ax = plt.subplots(2,figsize=(15,11))
 
 # scatter periods and amplitudes
 np.random.seed(0)
 P = 0.2 + np.random.random(size=20)
 A = np.random.random(size=20)
 x = np.linspace(0, 10, 100)
+#data has shape (n_samples, n_dimensions, n_timesteps) i.e. (n_samples, x and y values, number of measurements)
 data = np.array([[x, Ai * np.sin(x / Pi)]
                  for (Ai, Pi) in zip(A, P)])
+data2 = np.array([[x, Ai * np.cos(x / Pi)]
+                 for (Ai, Pi) in zip(A, P)])
+data = np.concatenate((data, data2), axis=0)
 points = ax[1].scatter(P, A, c=P + A,
                        s=200, alpha=0.5)
 ax[1].set_xlabel('Period')
@@ -63,6 +68,13 @@ lines = ax[0].plot(x, 0 * x, '-w', lw=3, alpha=0.5)
 ax[0].set_ylim(-1, 1)
 
 ax[0].set_title("Hover over points to see lines")
+
+labels = np.arange(20)
+for label, x, y in zip(labels, P, A):
+    plt.text(x-.05, y+.05,
+        "point" +str(label),
+        ha = 'right', va = 'bottom')
+    plt.plot([x-.05,x], [y+.05,y], 'k-')
 
 # transpose line data and add plugin
 linedata = data.transpose(0, 2, 1).tolist()
@@ -78,4 +90,4 @@ plugins.connect(fig, LinkedView(points, lines[0], linedata), zoom)
 mpld3.save_html(fig, file("figure.html", "wb"))
 
 #Open in browser from python
-#mpld3.show()
+mpld3.show()
