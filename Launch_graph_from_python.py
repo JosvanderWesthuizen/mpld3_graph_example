@@ -13,7 +13,7 @@ class LinkedView(plugins.PluginBase):
     mpld3.register_plugin("linkedview", LinkedViewPlugin);
     LinkedViewPlugin.prototype = Object.create(mpld3.Plugin.prototype);
     LinkedViewPlugin.prototype.constructor = LinkedViewPlugin;
-    LinkedViewPlugin.prototype.requiredProps = ["idpts", "idline", "data", "idline2", "data2"];
+    LinkedViewPlugin.prototype.requiredProps = ["idpts", "idline", "data"];
     LinkedViewPlugin.prototype.defaultProps = {}
     function LinkedViewPlugin(fig, props){
         mpld3.Plugin.call(this, fig, props);
@@ -21,37 +21,42 @@ class LinkedView(plugins.PluginBase):
 
     LinkedViewPlugin.prototype.draw = function(){
       var pts = mpld3.get_element(this.props.idpts);
-      var line = mpld3.get_element(this.props.idline);
-      var line2 = mpld3.get_element(this.props.idline2);
+      var line_ids = this.props.idline;
       var data = this.props.data;
-      var data2 = this.props.data2;
+
+      //Create the array of lines
+      var line = [];
+      for (k = 0; k < line_ids.length; k++) {
+        line[k]=mpld3.get_element(line_ids[k]);
+        }
 
       function mouseover(d, i){
-        line.data = data[i];
-        line2.data2 = data2[i];
-        line.elements().transition()
-            .attr("d", line.datafunc(line.data))
-            .style("stroke", this.style.fill);
-        line2.elements().transition()
-            .attr("d", line2.datafunc(line2.data2))
-            .style("stroke", this.style.fill);
+        for (j = 0; j < data.length; j++) {
+            line[j].data = data[j][i];
+            line[j].elements().transition()
+                .attr("d", line[j].datafunc(line[j].data))
+                .style("stroke", this.style.fill);
+                 
+        }
       }
       pts.elements().on("mouseover", mouseover);
     };
     """
 
-    def __init__(self, points, line, linedata, line2, linedata2):
+    def __init__(self, points, line, linedata):
         if isinstance(points, matplotlib.lines.Line2D):
             suffix = "pts"
         else:
             suffix = None
 
+        line_ids = [None]*len(line)
+        for i,l in enumerate(line):
+            line_ids[i] = utils.get_id(l)  
+
         self.dict_ = {"type": "linkedview",
                       "idpts": utils.get_id(points, suffix),
-                      "idline": utils.get_id(line),
-                      "data": linedata,
-                      "idline2": utils.get_id(line2),
-                      "data2": linedata2}
+                      "idline": line_ids,
+                      "data": linedata}
 
 fig, ax = plt.subplots(2,figsize=(15,11))
 
@@ -65,7 +70,7 @@ data = np.array([[x, Ai * np.sin(x / Pi)]
                  for (Ai, Pi) in zip(A, P)])
 data2 = np.array([[x, Ai * np.cos(x / Pi)]
                  for (Ai, Pi) in zip(A, P)])
-
+#data = np.array([data, data2])
 points = ax[1].scatter(P, A, c=P + A,
                        s=200, alpha=0.5)
 ax[1].set_xlabel('Period')
@@ -75,6 +80,8 @@ ax[1].set_ylabel('Amplitude')
 lines = ax[0].plot(x, 0 * x, '-w', lw=3, alpha=0.5)
 ax[0].set_ylim(-1, 1)
 lines2 = ax[0].plot(x, 0 * x, '-w', lw=3, alpha=0.5)
+
+lines = [lines[0], lines2[0]]
 
 ax[0].set_title("Hover over points to see lines")
 
@@ -89,13 +96,14 @@ for label, x, y in zip(labels, P, A):
 # transpose line data and add plugin
 linedata = data.transpose(0, 2, 1).tolist()
 linedata2 = data2.transpose(0, 2, 1).tolist()
+linedata = [linedata, linedata2]
 
 #Clear the default plugins, which create buttons for zooming and panning
 plugins.clear(fig)
 #Create automatic zooming and panning
 zoom = plugins.Zoom(button=False, enabled=True)
 #Add the plugins to the figure
-plugins.connect(fig, LinkedView(points, lines[0], linedata, lines2[0], linedata2), zoom)
+plugins.connect(fig, LinkedView(points, lines, linedata), zoom)
 
 #Save as html
 mpld3.save_html(fig, file("figure.html", "wb"))
